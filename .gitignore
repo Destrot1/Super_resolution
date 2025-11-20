@@ -1,0 +1,15 @@
+# Ignore results folder
+results/
+
+# Ignore main log file
+train.log
+
+# Ignore __pycache__ in src folder
+src/__pycache__/
+
+# Ignore TensorBoard logs
+runs/
+
+# Ignore all files in data except HR_volume.nii.gz
+data/*
+!data/HR_volume.nii.gz
