@@ -1,27 +1,64 @@
-# SUPER RESOLUTION
+# SUPER RESOLUTION FOR MEDICAL CT SCANS
 
-**Transforming Images, Elevating Clarity Instantly**
+**from blurred, low-res slices to high-quality medical images**
 
 ## **Table of Contents**
-1. [Overview](#overview)  
-2. [Getting Started](#getting-started)  
+1. [Overview](#overview)
+   - [Motivation and Scenario](#motivationandscenario)
+   - [Training Strategy](#trainingstrategy)
+   - [Inference](#inference)
+   - [Results](#results) 
+3. [Getting Started](#getting-started)  
    - [Prerequisites](#prerequisites)  
    - [Installation](#installation)  
-3. [Usage](#usage)  
-4. [Testing](#testing)  
-5. [Project Structure](#project-structure)  
+4. [Usage](#usage)  
+5. [Testing](#testing)  
+6. [Project Structure](#project-structure)  
 
 ## **Overview**
-Super Resolution is a comprehensive developer tool designed to enhance medical images by increasing their resolution through advanced super-resolution techniques. It provides an end-to-end pipeline for training, validating, and deploying models tailored for medical imaging data, particularly volumetric scans.
+This project investigates the feasibility of training a light convolutional neural network (CNN) to perform medical image super-resolution. The goal is not to provide a finished or production-ready method, but rather to build a clear and minimal proof of concept demonstrating that high-resolution (HR) medical images can be effectively reconstructed from artificially degraded inputs.
 
-### **Why Super_resolution?**
-This project aims to improve image quality in medical diagnostics and research. The core features include:
+Despite its simplicity, the experiment produced strong qualitative results, showing that even a compact architecture can recover diagnostically meaningful details from low-resolution data.
+A crucial aspect in medical applications is that the resulting image must not simply look “good” in a visual or aesthetic sense: it must be reliable, free of misleading artifacts, and truly readable by clinicians. Diagnostic accuracy depends on image fidelity, not on perceptual sharpness alone, and this project is designed with that principle in mind.
 
-- **Model Building & Training:** Seamlessly define, train, and evaluate super-resolution neural networks optimized for medical images.  
-- **Data Preparation & Augmentation:** Efficiently generate and manage low- and very-low-resolution image patches from volumetric scans.  
-- **Image Processing Utilities:** Utilities for visualizing, degrading, and comparing NIfTI slices to assess model performance.  
-- **Inference & Evaluation:** Perform high-quality image prediction with metrics like PSNR and SSIM, supporting iterative improvements.  
-- **Modular Architecture & Logging:** Well-structured codebase with comprehensive logging for debugging and monitoring.  
+
+### **Motivation and Scenario**
+This setup mimics real clinical scenarios in which scanners may output low-resolution (LR) images.
+By artificially degrading LR images to very-low-resolution (VLR) images, training a network to recover LR, and then reusing the same model to upscale LR to high-resolution (HR) images, it becomes possible to enhance medical images without requiring HR ground truth during deployment.
+
+Lower-resolution imaging hardware can be highly advantageous in real-world healthcare settings. Scanners that operate at reduced resolution typically expose patients to less radiation, lowering clinical risk (an especially important factor in repeated imaging procedures). Additionally, low-res hardware is significantly cheaper, more compact, and easier to maintain.
+
+This opens the door to deploying CT or similar imaging devices in resource-limited environments, mobile units, emergency settings, or remote regions where full clinical infrastructures are not available. By reconstructing high-quality images from low-resolution acquisitions, super-resolution techniques like the one explored in this project could help bridge the gap between accessibility and diagnostic quality.
+
+
+### **Training Strategy**
+The training pipeline is designed to mimic a scenario where only low-resolution (LR) images are available:
+
+1. **Start from a high-resolution (HR) NIfTI slice (512×512).**
+2. **Generate a low-resolution (LR) version** by downscaling the HR slice by a factor of 2 and applying Gaussian blur (resulting in 256×256).  
+   This represents the hypothetical output produced by a low-resolution medical scanner.
+3. **Further degrade the LR image** by again downscaling by 2 and applying Gaussian blur, producing a very-low-resolution (VLR) slice (128×128).
+4. **Train a lightweight five-layer convolutional neural network** (with ReLU activations) to estimate the residual between VLR and LR, effectively learning the mapping **VLR → LR**.
+
+During training, the network never sees the HR images.  
+It only learns how to reconstruct LR from VLR, and this learned behavior is later reused to upscale LR to HR during inference.
+
+
+### **Inference**
+At inference time, the trained model is applied directly to the low-resolution (LR) image (256×256) to generate high-resolution (HR) prediction (512×512).  
+Even though the network was trained exclusively on the **128×128 → 256×256** mapping, it generalizes to the **256×256 → 512×512** upscale.  
+The model reconstructs high-resolution outputs by reusing the residual patterns learned during training, effectively "hallucinating" plausible details while preserving the underlying medical structures.
+
+
+### **Results**
+The model achieves the following metrics when reconstructing HR from LR:
+
+- **PSNR:** 29.22 dB  
+- **SSIM:** 0.9401  
+
+These results demonstrate strong structural similarity to the ground-truth HR images, confirming the model’s ability to recover fine anatomical details from degraded inputs.  
+Considering that this project is a deliberately lightweight proof of concept, designed to test feasibility rather than optimize performance, achieving such metrics is particularly encouraging.  
+They indicate that even a minimal architecture can produce high-quality reconstructions, reinforcing the potential of this approach for real medical imaging applications.
 
 ## **Getting Started**
 
@@ -48,11 +85,11 @@ conda activate sr_projects
 ## **Usage**
 
 **1. Train the model and monitor training:**  
-Esegui il training del modello:
+Run the model training:
 ```bash
 python main.py
 ```
-Visualizza le metriche in tempo reale con TensorBoard:
+Visualize real time metrics with TensorBoard:
 ```bash
 tensorboard --logdir=runs
 ```
@@ -111,26 +148,18 @@ The project is organized to be modular and clear. Here is an overview of the mai
 ```
 Super_resolution/
 ├── src/                     # Main source code
-│   ├── train.py             # Functions for model training
-│   ├── inference.py         # Functions for inference and evaluation
-│   ├── nifti.py             # Utilities for handling NIfTI files and visualization
-│   └── __pycache__/         # Compiled Python files (ignored by git)
+│   ├── build_model.py         
+│   ├── train.py             
+│   ├── inference.py         
+│   └──nifti.py              # Utilities for handling NIfTI files, estract slices from the volume and produce LR and VLR images
+│    
 ├── data/                    # Folder containing the datasets
-│   ├── HR_volume.nii.gz     # High-resolution reference volume
-│   ├── VLR_slice.nii.gz     # Very low-resolution slice
-│   └── LR_slice.nii.gz      # Low-resolution slice
+│   └──  HR_volume.nii.gz     # High-resolution reference volume
+│   
 ├── results/                 # Model outputs and saved images
 ├── runs/                    # TensorBoard logs for training monitoring
 ├── main.py                  # Main script for training and inference
 ├── model_weights/           # Saved model weights
 ├── train.log                # Training session log file
-├── environment.yml          # Conda environment configuration
 └── README.md                # Project documentation
 ```
-
-**Quick description:**  
-- `src/` contains all the project logic (training, inference, utilities).  
-- `data/` hosts slices and volumes used for training and testing.  
-- `results/` and `runs/` store outputs and logs, excluded from version control.  
-- `main.py` is the entry point for training and inference.  
-- `model_weights/` stores trained model weights for future use.
