@@ -21,6 +21,10 @@ This project investigates the feasibility of training a light convolutional neur
 Despite its simplicity, the experiment produced strong qualitative results, showing that even a compact architecture can recover diagnostically meaningful details from low-resolution data.<br>
 A crucial aspect in medical applications is that the resulting image must not simply look “good” in a visual or aesthetic sense: it must be reliable, free of misleading artifacts, and truly readable by clinicians. Diagnostic accuracy depends on image fidelity, not on perceptual sharpness alone, and this project is designed with that principle in mind.
 
+Here is an example of the super-resolution output:
+
+![Super-resolution result](images/results.png)
+
 
 ### **Motivation and Scenario**
 This setup mimics real clinical scenarios in which scanners may output low-resolution (LR) images.<br>
